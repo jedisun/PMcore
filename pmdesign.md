@@ -144,8 +144,8 @@ Polymarket 存在地理限制检查。检查对象不是抽象账户，而是请
 
 数据库策略：
 
-- M1 只读版：SQLite 可接受
-- 进入交易版前：切 PostgreSQL
+- 主路径：PostgreSQL
+- SQLite 仅作为本地轻量实验或临时测试替身，不作为正式演进目标
 
 ---
 
@@ -695,7 +695,7 @@ polymarket-app/
 APP_ENV=dev
 APP_LOG_LEVEL=INFO
 
-DATABASE_URL=sqlite:///./polymarket.db
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/pmcore
 
 POLY_PRIVATE_KEY=
 POLY_FUNDER=
@@ -717,6 +717,8 @@ PM_MAX_PRICE_DEVIATION_BPS=100
 
 - 配置只用于默认 profile
 - 真正多账户运行时，交易身份以数据库记录为准
+- 默认数据库示例使用 PostgreSQL
+- 若本地临时切换 SQLite，仅用于开发便利，不保证覆盖完整交易链路
 
 ---
 

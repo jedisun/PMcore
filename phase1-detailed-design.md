@@ -68,10 +68,12 @@ PMcore/
 - `pydantic`
 - `pydantic-settings`
 - `structlog`
+- `sqlalchemy`
+- `psycopg[binary]`
 
 说明：
 
-- 第一批先不引入数据库、WebSocket、Polymarket SDK 的实现性依赖
+- 第一批引入数据库基础依赖，但只做连接与配置层，不实现完整 repository
 - 后续在第二批、第三批按模块加入，避免骨架期依赖膨胀
 
 ### 3.3 开发依赖
@@ -118,7 +120,7 @@ APP_LOG_JSON=false
 APP_LOG_HTTP=false
 APP_LOG_WS=false
 
-DATABASE_URL=sqlite:///./pmcore.db
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/pmcore
 
 POLY_PRIVATE_KEY=
 POLY_FUNDER=
@@ -140,6 +142,8 @@ PM_MAX_PRICE_DEVIATION_BPS=100
 
 - 第一批实现时，交易字段允许为空
 - 但 `settings` 模块必须支持“交易模式下进行完整性校验”
+- PostgreSQL 是默认主路径
+- SQLite 仅作为本地临时实验配置，不作为正式开发目标
 
 ---
 
@@ -175,6 +179,7 @@ PM_MAX_PRICE_DEVIATION_BPS=100
 #### `DatabaseSettings`
 
 - `database_url`
+- `database_enabled`
 
 #### `PolymarketSettings`
 
@@ -231,6 +236,7 @@ PM_MAX_PRICE_DEVIATION_BPS=100
 - `log_level` 必须是合法级别
 - 金额和风险参数必须为非负
 - `database_url` 不可为空
+- 若 `database_enabled=true`，则 `database_url` 必须是合法 DSN
 
 ### 5.5 测试用例
 
@@ -343,7 +349,7 @@ CLI 先只做最小可运行入口，不实现真实业务命令。
 其中：
 
 - `version` 用于验证打包和入口安装正常
-- `health check` 第一批只返回配置与日志系统已初始化
+- `health check` 第一批返回基础运行状态，不触发任何外部交易请求
 
 ### 7.2 启动流程
 
@@ -355,7 +361,47 @@ CLI 先只做最小可运行入口，不实现真实业务命令。
 4. 创建 Typer app
 5. 注册基础命令
 
-### 7.3 测试用例
+### 7.3 `health check` 输出设计
+
+第一批的 `pm health check` 至少输出以下信息：
+
+1. 当前 settings 模式
+   - `readonly`
+   - `trading`
+
+2. 日志配置是否生效
+   - 当前 `log_level`
+   - 当前输出格式：`json` / `console`
+   - logging 初始化是否成功
+
+3. 数据库是否可连接
+   - 若当前阶段未启用数据库检查，则返回 `disabled`
+   - 若已启用数据库检查，则返回 `ok` / `failed`
+
+建议输出结构：
+
+```json
+{
+  "mode": "readonly",
+  "logging": {
+    "configured": true,
+    "level": "INFO",
+    "format": "console"
+  },
+  "database": {
+    "enabled": true,
+    "status": "ok"
+  }
+}
+```
+
+说明：
+
+- 第一批允许数据库检查关闭，但默认设计目标是 PostgreSQL 可连接
+- 但接口结构要先固定，避免后续 CLI 输出被破坏
+- 当 `PM_ENABLE_TRADING=true` 时，`mode` 必须明确显示为 `trading`
+
+### 7.4 测试用例
 
 `tests/cli/test_cli_bootstrap.py`
 
@@ -364,6 +410,9 @@ CLI 先只做最小可运行入口，不实现真实业务命令。
 1. `pm --help` 返回成功
 2. `pm version` 返回版本信息
 3. `pm health check` 返回成功
+4. `pm health check` 包含 `mode`
+5. `pm health check` 包含 logging 状态
+6. `pm health check` 在数据库未启用时返回 `disabled`
 
 ---
 
@@ -377,6 +426,7 @@ CLI 先只做最小可运行入口，不实现真实业务命令。
 4. `Settings.load()` 与校验逻辑通过测试
 5. logging 初始化通过测试
 6. `pytest` 能执行并通过第一批测试
+7. 若本地 PostgreSQL 可用，`pm health check` 可正确返回数据库连接状态
 
 ---
 
