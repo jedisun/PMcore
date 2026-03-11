@@ -4,5 +4,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+reports/
 src/*.egg-info/
 src/**/*.egg-info/
