@@ -1,3 +1,13 @@
+"""Application settings and mode validation.
+
+The design follows the Polymarket backend notes in `pmdesign.md`:
+
+- readonly mode must start with minimal local configuration
+- trading mode must fail fast if Polymarket trading credentials are incomplete
+- database configuration is modeled explicitly because PostgreSQL is the
+  primary persistence target from phase 1 onward
+"""
+
 from __future__ import annotations
 
 from typing import Literal
@@ -118,6 +128,9 @@ class Settings(BaseModel):
 
     @classmethod
     def load(cls) -> "Settings":
+        # BaseSettings performs env-file and process environment loading once.
+        # We then map the raw environment shape into grouped runtime settings so
+        # downstream modules do not depend on env-var names directly.
         raw = EnvSettings()
         return cls(
             app=AppSettings(
@@ -154,6 +167,10 @@ class Settings(BaseModel):
         return "trading" if self.polymarket.enable_trading else "readonly"
 
     def validate_for_readonly(self) -> None:
+        # readonly mode is the minimum startup path used by phase-1 CLI
+        # commands. It allows missing Polymarket trading credentials but still
+        # enforces basic runtime correctness such as a non-empty database DSN
+        # when database checks are enabled.
         if self.database.database_enabled and not self.database.database_url.strip():
             raise ValidationError.from_exception_data(
                 "DatabaseSettings",
@@ -162,6 +179,11 @@ class Settings(BaseModel):
 
     def validate_for_trading(self) -> None:
         self.validate_for_readonly()
+        # Polymarket's CLOB trading flow requires more than a wallet private
+        # key. The official docs separate signer identity, funder address, and
+        # API credentials used for authenticated trading requests. We enforce
+        # that boundary here so phase-2/3 order entry can fail fast before any
+        # request is sent.
         missing = [
             name
             for name, value in {
@@ -176,4 +198,3 @@ class Settings(BaseModel):
         ]
         if missing:
             raise ValueError(f"trading mode requires credentials: {', '.join(missing)}")
-

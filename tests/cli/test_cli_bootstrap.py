@@ -1,3 +1,5 @@
+"""Smoke tests for the phase-1 CLI surface."""
+
 from typer.testing import CliRunner
 
 from polymarket_app.main import app
@@ -23,6 +25,8 @@ def test_health_check_json_readonly(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_ENABLED", "false")
     monkeypatch.setenv("PM_ENABLE_TRADING", "false")
 
+    # The first health-check contract is intentionally tiny but stable: mode,
+    # logging bootstrap state, and database status.
     result = runner.invoke(app, ["health", "check", "--json"])
 
     assert result.exit_code == 0

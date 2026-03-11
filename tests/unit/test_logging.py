@@ -1,3 +1,5 @@
+"""Tests for structured logging bootstrap."""
+
 import logging
 
 from polymarket_app.config.logging import configure_logging, get_logger, is_logging_configured
@@ -17,6 +19,8 @@ def build_settings(level: str = "INFO", json_mode: bool = False) -> AppSettings:
 def test_configure_logging_is_idempotent() -> None:
     settings = build_settings()
 
+    # CLI bootstrap and tests may initialize logging multiple times in one
+    # interpreter session, so repeated configuration must stay safe.
     configure_logging(settings)
     configure_logging(settings)
 
