@@ -1,8 +1,9 @@
-"""CLI entrypoint for PMcore phase 1.
+"""PMcore 第一阶段 CLI 入口。
 
-This file intentionally exposes only bootstrap commands. It does not reach out
-to Polymarket APIs yet; instead, it verifies that local configuration,
-structured logging, and database connectivity checks are wired correctly.
+这个文件当前只暴露启动与基础检查命令，
+还不会真正访问 Polymarket API。
+它的职责是先验证本地配置、结构化日志和数据库连通性
+已经按设计接好。
 """
 
 from __future__ import annotations
@@ -23,10 +24,10 @@ app.add_typer(health_app, name="health")
 
 
 def _load_settings() -> Settings:
-    # Command bootstrap follows the design contract:
-    # 1. load settings
-    # 2. validate by runtime mode
-    # 3. initialize logging once
+    # 命令启动流程遵循设计文档约定：
+    # 1. 加载 settings
+    # 2. 按当前模式做校验
+    # 3. 初始化日志
     settings = Settings.load()
     if settings.mode == "trading":
         settings.validate_for_trading()
@@ -41,9 +42,9 @@ def _database_status(settings: Settings) -> dict[str, Any]:
         return {"enabled": False, "status": "disabled"}
 
     try:
-        # The first phase only needs a connectivity probe. We intentionally do
-        # not initialize metadata or run migrations here because health checks
-        # must stay cheap and side-effect free.
+        # 第一阶段这里只做数据库连通性探测。
+        # 故意不在 health check 里初始化 metadata 或执行迁移，
+        # 因为健康检查必须保持轻量、无副作用。
         engine = create_engine(settings.database.database_url, future=True)
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
@@ -60,9 +61,8 @@ def version() -> None:
 
 @health_app.command("check")
 def health_check(json_output: bool = typer.Option(False, "--json", help="Emit JSON output")) -> None:
-    # The health payload mirrors the phase-1 design document. It reports the
-    # current runtime mode, whether logging bootstrap succeeded, and whether the
-    # configured database target is reachable or intentionally disabled.
+    # health payload 和 phase 1 设计文档保持一致：
+    # 输出当前模式、日志是否初始化成功、以及数据库目标是可连通还是被禁用。
     settings = _load_settings()
     payload = {
         "mode": settings.mode,
@@ -78,8 +78,8 @@ def health_check(json_output: bool = typer.Option(False, "--json", help="Emit JS
         typer.echo(json.dumps(payload, indent=2, sort_keys=True))
         return
 
-    # Human-readable output is kept simple for local CLI use. The JSON path is
-    # the stable interface for tests and future automation.
+    # 人类可读输出保持简单，方便本地 CLI 使用；
+    # JSON 输出则作为测试和后续自动化的稳定接口。
     typer.echo(f"mode: {payload['mode']}")
     typer.echo(
         "logging: configured={configured} level={level} format={format}".format(

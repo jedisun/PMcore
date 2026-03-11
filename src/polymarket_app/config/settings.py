@@ -1,11 +1,10 @@
-"""Application settings and mode validation.
+"""应用配置与运行模式校验。
 
-The design follows the Polymarket backend notes in `pmdesign.md`:
+这里的设计遵循 `pmdesign.md` 中已经确认的约束：
 
-- readonly mode must start with minimal local configuration
-- trading mode must fail fast if Polymarket trading credentials are incomplete
-- database configuration is modeled explicitly because PostgreSQL is the
-  primary persistence target from phase 1 onward
+- readonly 模式必须能用最小本地配置启动
+- trading 模式下，若 Polymarket 交易凭证不完整，必须尽早失败
+- 数据库配置需要显式建模，因为从第一阶段开始 PostgreSQL 就是主路径
 """
 
 from __future__ import annotations
@@ -128,9 +127,9 @@ class Settings(BaseModel):
 
     @classmethod
     def load(cls) -> "Settings":
-        # BaseSettings performs env-file and process environment loading once.
-        # We then map the raw environment shape into grouped runtime settings so
-        # downstream modules do not depend on env-var names directly.
+        # BaseSettings 负责统一读取 .env 和进程环境变量。
+        # 这里再把扁平环境变量整理成分组配置对象，避免下游模块直接依赖
+        # 具体 env 名称，降低后续重构成本。
         raw = EnvSettings()
         return cls(
             app=AppSettings(
@@ -167,10 +166,9 @@ class Settings(BaseModel):
         return "trading" if self.polymarket.enable_trading else "readonly"
 
     def validate_for_readonly(self) -> None:
-        # readonly mode is the minimum startup path used by phase-1 CLI
-        # commands. It allows missing Polymarket trading credentials but still
-        # enforces basic runtime correctness such as a non-empty database DSN
-        # when database checks are enabled.
+        # readonly 模式是第一阶段 CLI 的最小启动路径。
+        # 它允许缺少 Polymarket 交易凭证，但仍然要求基础运行配置正确，
+        # 例如数据库检查开启时，DATABASE_URL 不能为空。
         if self.database.database_enabled and not self.database.database_url.strip():
             raise ValidationError.from_exception_data(
                 "DatabaseSettings",
@@ -179,11 +177,10 @@ class Settings(BaseModel):
 
     def validate_for_trading(self) -> None:
         self.validate_for_readonly()
-        # Polymarket's CLOB trading flow requires more than a wallet private
-        # key. The official docs separate signer identity, funder address, and
-        # API credentials used for authenticated trading requests. We enforce
-        # that boundary here so phase-2/3 order entry can fail fast before any
-        # request is sent.
+        # Polymarket 的 CLOB 交易链路不只是“有私钥即可”。
+        # 按官方文档，交易请求至少还涉及 signer 身份、funder 地址和
+        # API credentials。这里先把这个边界卡住，确保第二、三阶段在
+        # 真正发请求前就能快速失败，而不是把错误拖到网络层。
         missing = [
             name
             for name, value in {

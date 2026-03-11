@@ -1,8 +1,7 @@
-"""Tests for settings bootstrap and mode validation.
+"""settings 启动与模式校验测试。
 
-These tests protect the startup contract before any Polymarket client code is
-introduced: readonly mode must stay lightweight, while trading mode must reject
-incomplete credentials immediately.
+这些测试保护第一阶段最关键的启动契约：
+readonly 模式必须足够轻，trading 模式必须对缺失凭证快速失败。
 """
 
 import pytest
@@ -11,8 +10,8 @@ from polymarket_app.config.settings import Settings
 
 
 def clear_pm_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Tests reset every known env var so each case runs from a deterministic
-    # baseline instead of inheriting developer machine state.
+    # 每个测试都重置已知环境变量，
+    # 避免继承开发机当前环境导致结果不稳定。
     keys = [
         "APP_ENV",
         "APP_LOG_LEVEL",
@@ -92,6 +91,6 @@ def test_trading_mode_requires_credentials(monkeypatch: pytest.MonkeyPatch) -> N
 
     settings = Settings.load()
 
-    # Trading mode should fail before any Polymarket request is attempted.
+    # trading 模式应当在真正尝试访问 Polymarket 之前就失败。
     with pytest.raises(ValueError, match="POLY_PRIVATE_KEY"):
         settings.validate_for_trading()

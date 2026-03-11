@@ -1,4 +1,4 @@
-"""Smoke tests for the phase-1 CLI surface."""
+"""第一阶段 CLI 冒烟测试。"""
 
 from typer.testing import CliRunner
 
@@ -25,8 +25,8 @@ def test_health_check_json_readonly(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_ENABLED", "false")
     monkeypatch.setenv("PM_ENABLE_TRADING", "false")
 
-    # The first health-check contract is intentionally tiny but stable: mode,
-    # logging bootstrap state, and database status.
+    # 第一版 health check 的契约很小，但要稳定：
+    # mode、logging 状态、database 状态必须始终存在。
     result = runner.invoke(app, ["health", "check", "--json"])
 
     assert result.exit_code == 0

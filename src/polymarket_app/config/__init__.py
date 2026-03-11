@@ -1,7 +1,7 @@
-"""Configuration package exports.
+"""配置包统一导出。
 
-Phase 1 keeps configuration and logging initialization centralized here so
-later modules can import a stable API without duplicating bootstrap logic.
+第一阶段将配置加载和日志初始化集中在这里，
+后续模块可以直接依赖稳定 API，而不需要重复写启动逻辑。
 """
 
 from polymarket_app.config.logging import configure_logging, get_logger

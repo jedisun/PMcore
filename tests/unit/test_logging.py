@@ -1,4 +1,4 @@
-"""Tests for structured logging bootstrap."""
+"""结构化日志启动测试。"""
 
 import logging
 
@@ -19,8 +19,8 @@ def build_settings(level: str = "INFO", json_mode: bool = False) -> AppSettings:
 def test_configure_logging_is_idempotent() -> None:
     settings = build_settings()
 
-    # CLI bootstrap and tests may initialize logging multiple times in one
-    # interpreter session, so repeated configuration must stay safe.
+    # CLI 启动和测试都可能在同一进程中多次初始化 logging，
+    # 因此重复调用必须保持安全。
     configure_logging(settings)
     configure_logging(settings)
 

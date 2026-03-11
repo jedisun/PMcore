@@ -1,8 +1,7 @@
-"""Top-level package metadata for PMcore.
+"""PMcore 顶层包元数据。
 
-This package is intentionally small in phase 1. It only exposes a version
-constant so the CLI can report a stable application version before any
-networking or trading modules are introduced.
+第一阶段的包结构故意保持很小，只暴露版本号常量，
+让 CLI 在引入网络访问和交易模块之前就能输出稳定版本信息。
 """
 
 __all__ = ["__version__"]
