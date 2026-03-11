@@ -1,9 +1,9 @@
-"""Logging bootstrap for PMcore.
+"""PMcore 日志初始化模块。
 
-Structured logging is initialized once during CLI startup so later service and
-client modules can emit consistent records. The split between console and JSON
-rendering matches the phase-1 design: console for local development, JSON for
-machine-readable environments.
+结构化日志只在 CLI 启动时初始化一次，
+后续 service 和 client 模块复用同一套输出约定。
+console / JSON 两种渲染方式也和第一阶段设计保持一致：
+本地开发偏向 console，可观测性或自动化环境偏向 JSON。
 """
 
 from __future__ import annotations
@@ -21,8 +21,9 @@ _CONFIGURED = False
 def configure_logging(settings: AppSettings) -> None:
     global _CONFIGURED
 
-    # Context merging is included from the beginning because later Polymarket
-    # workflows will attach fields such as account_id, token_id, and order_id.
+    # 从第一阶段开始就保留上下文字段合并能力，
+    # 后续接入 Polymarket 交易流程时，可以自然附带
+    # account_id、token_id、order_id 等关键字段。
     shared_processors = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.TimeStamper(fmt="iso"),
@@ -36,9 +37,8 @@ def configure_logging(settings: AppSettings) -> None:
     else:
         renderer = structlog.dev.ConsoleRenderer(colors=False)
 
-    # `force=True` keeps repeated test/bootstrap runs deterministic. This is
-    # important because phase-1 tests create the app multiple times in one
-    # process.
+    # `force=True` 可以保证重复初始化时行为稳定。
+    # 这一点对测试很重要，因为 phase 1 的测试会在同一进程里多次启动 CLI。
     logging.basicConfig(
         level=getattr(logging, settings.log_level),
         format="%(message)s",
