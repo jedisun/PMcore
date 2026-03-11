@@ -806,6 +806,83 @@ PM_MAX_PRICE_DEVIATION_BPS=100
 17. 对账
 18. FastAPI
 
+### 15.1 实施单元拆分
+
+为保证每个阶段都可测试、可回归，开发按以下 15 个小单元推进：
+
+1. `settings`
+2. `logging`
+3. domain models
+4. DB models + migrations
+5. `GammaClient`
+6. `MarketService.sync_markets`
+7. `BookService.get_book`
+8. CLI `markets sync`
+9. CLI `book show`
+10. `AccountService`
+11. `PreTradeChecks`
+12. `OrderService.place_order`
+13. `ExecutionGuard`
+14. `WsMarketClient`
+15. `WsUserClient`
+
+说明：
+
+- 这 15 个单元是对里程碑和优先级的进一步细化，不改变 `M0 -> M4` 的总体顺序
+- 前 1-9 项属于“只读与基础设施优先”
+- 10-15 项进入交易与实时状态链路
+
+### 15.2 并行策略
+
+允许并行的部分：
+
+- `GammaClient` 与 DB schema
+- `MarketService.sync_markets` 与 `BookService.get_book`
+- CLI `markets sync` 与 CLI `book show`
+- `AccountService` 与 balances / allowances 同步
+- `WsMarketClient` 与 REST book 读取
+- `OrderService.place_order` 与 `WsUserClient`
+
+不建议并行的部分：
+
+- 账户认证模型与交易执行模型
+- 订单状态机与用户事件映射
+- `ExecutionGuard` 与 heartbeat 语义
+
+原因：
+
+- 这些部分耦合较强，过早并行会造成接口反复修改
+
+### 15.3 测试策略
+
+每个小单元必须满足：
+
+- 至少 1 个单元测试文件
+- 至少 1 组正常路径用例
+- 至少 1 组错误或边界用例
+- 若涉及 HTTP / WebSocket，必须提供 mock 或 fake 测试
+
+建议测试目录：
+
+```text
+tests/
+├─ unit/
+├─ integration/
+├─ cli/
+└─ fixtures/
+```
+
+建议测试范围：
+
+- `settings` / `logging`：环境变量、默认值、非法值、输出格式
+- domain / DB：字段约束、枚举、迁移、upsert
+- clients：请求构造、响应解析、异常映射、限流/重试
+- services：同步逻辑、过滤、聚合、审计落库
+- pre-trade：tick size、min order size、allowance、余额、geoblock
+- order execution：幂等、部分成交、取消、失败恢复
+- websocket：快照、增量、断线重连、坏消息处理
+- CLI：参数解析、输出格式、错误码、`--json`
+
 ---
 
 ## 16. 下一步建议
